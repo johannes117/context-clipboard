@@ -25,7 +25,7 @@
       "context-clipboard-explorer": [
         {
           "id": "contextClipboardView",
-          "name": "File Selection"
+          "name": "Context Clipboard"
         }
       ]
     },
@@ -36,7 +36,7 @@
       },
       {
         "command": "contextClipboard.copyToClipboard",
-        "title": "Copy Selected Files to Clipboard"
+        "title": "Copy Context"
       },
       {
         "command": "contextClipboard.clearSelection",
@@ -48,7 +48,8 @@
         {
           "command": "contextClipboard.copyToClipboard",
           "when": "view == contextClipboardView",
-          "group": "navigation"
+          "group": "navigation",
+          "title": "$(copy)"
         }
       ]
     }

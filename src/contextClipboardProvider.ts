@@ -18,7 +18,7 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             showCollapseAll: true
         });
 
-        this.view.title = "File Selection";
+        this.view.title = "Context Clipboard";
         this.view.description = "Select files to copy";
         this.view.message = undefined;
     }
