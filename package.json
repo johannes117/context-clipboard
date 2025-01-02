@@ -32,8 +32,7 @@
     "commands": [
       {
         "command": "contextClipboard.toggleSelection",
-        "title": "Toggle Selection",
-        "icon": "$(checkbox-unchecked)"
+        "title": "Toggle Selection"
       },
       {
         "command": "contextClipboard.copyToClipboard",

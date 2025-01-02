@@ -156,17 +156,14 @@ class FileItem extends vscode.TreeItem {
         this.selected = selected;
         this.isMessage = isMessage;
         this.tooltip = this.label;
+        this.contextValue = 'fileItem';
         if (this.isMessage) {
             // Style for message item
             this.iconPath = new vscode.ThemeIcon('info');
         }
         else {
-            // Use custom SVG icons for checkboxes
-            const iconPath = path.join(__dirname, '..', 'media', selected ? 'checkbox-checked.svg' : 'checkbox-unchecked.svg');
-            this.iconPath = {
-                light: vscode.Uri.file(iconPath),
-                dark: vscode.Uri.file(iconPath)
-            };
+            // Use VSCode's built-in icons with proper codicon names
+            this.iconPath = new vscode.ThemeIcon(selected ? 'check' : 'debug-stop', selected ? undefined : new vscode.ThemeColor('foreground'));
             this.command = {
                 command: 'contextClipboard.toggleSelection',
                 title: 'Toggle Selection',
