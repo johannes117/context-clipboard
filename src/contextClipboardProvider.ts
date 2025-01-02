@@ -25,7 +25,14 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             // Root of the workspace
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders) {
-                return [];
+                // Create a message item when no workspace is open
+                return [new FileItem(
+                    vscode.Uri.parse(''),
+                    'Open a folder or workspace to get started...',
+                    vscode.TreeItemCollapsibleState.None,
+                    false,
+                    true // new parameter to indicate this is a message item
+                )];
             }
             
             return workspaceFolders.map(folder => new FileItem(
@@ -134,11 +141,28 @@ class FileItem extends vscode.TreeItem {
         public readonly resourceUri: vscode.Uri,
         public readonly label: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        private selected: boolean
+        private selected: boolean,
+        private isMessage: boolean = false
     ) {
         super(resourceUri, collapsibleState);
         this.tooltip = this.label;
-        this.description = selected ? '✓' : '';
+        
+        if (this.isMessage) {
+            // Style for message item
+            this.iconPath = new vscode.ThemeIcon('info');
+        } else {
+            // Use custom SVG icons for checkboxes
+            const iconPath = path.join(__dirname, '..', 'media', selected ? 'checkbox-checked.svg' : 'checkbox-unchecked.svg');
+            this.iconPath = {
+                light: vscode.Uri.file(iconPath),
+                dark: vscode.Uri.file(iconPath)
+            };
+            this.command = {
+                command: 'contextClipboard.toggleSelection',
+                title: 'Toggle Selection',
+                arguments: [this]
+            };
+        }
     }
 
     contextValue = 'fileItem';

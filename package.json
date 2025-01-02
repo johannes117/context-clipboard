@@ -32,7 +32,8 @@
     "commands": [
       {
         "command": "contextClipboard.toggleSelection",
-        "title": "Toggle Selection"
+        "title": "Toggle Selection",
+        "icon": "$(checkbox-unchecked)"
       },
       {
         "command": "contextClipboard.copyToClipboard",
@@ -42,7 +43,15 @@
         "command": "contextClipboard.clearSelection",
         "title": "Clear Selection"
       }
-    ]
+    ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "contextClipboard.toggleSelection",
+          "when": "view == contextClipboardView && viewItem == fileItem"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run compile",
