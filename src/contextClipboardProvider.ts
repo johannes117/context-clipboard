@@ -10,7 +10,18 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
     private ignoredExtensions: string[] = ['.pyc', '.pyo', '.pyd', '.dll', '.exe', '.so', '.dylib', '.db', '.lock'];
     private ignoredDirectories: string[] = ['.next', 'venv', 'node_modules', '.vite', '.yarn', '.git'];
 
-    constructor(private context: vscode.ExtensionContext) {}
+    private view?: vscode.TreeView<FileItem>;
+
+    constructor(private context: vscode.ExtensionContext) {
+        this.view = vscode.window.createTreeView('contextClipboardView', {
+            treeDataProvider: this,
+            showCollapseAll: true
+        });
+
+        this.view.title = "File Selection";
+        this.view.description = "Select files to copy";
+        this.view.message = undefined;
+    }
 
     refresh(): void {
         this._onDidChangeTreeData.fire();

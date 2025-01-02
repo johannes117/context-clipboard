@@ -44,8 +44,16 @@ class ContextClipboardProvider {
     selectedItems = new Set();
     ignoredExtensions = ['.pyc', '.pyo', '.pyd', '.dll', '.exe', '.so', '.dylib', '.db', '.lock'];
     ignoredDirectories = ['.next', 'venv', 'node_modules', '.vite', '.yarn', '.git'];
+    view;
     constructor(context) {
         this.context = context;
+        this.view = vscode.window.createTreeView('contextClipboardView', {
+            treeDataProvider: this,
+            showCollapseAll: true
+        });
+        this.view.title = "File Selection";
+        this.view.description = "Select files to copy";
+        this.view.message = undefined;
     }
     refresh() {
         this._onDidChangeTreeData.fire();
