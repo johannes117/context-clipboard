@@ -1,6 +1,7 @@
 {
   "name": "context-clipboard",
   "displayName": "Context Clipboard",
+  "publisher": "contextstudio",
   "description": "Select and extract code files for LLM chat interfaces",
   "version": "0.0.1",
   "engines": {
@@ -55,14 +56,10 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run compile",
-    "compile": "tsc -p ./",
-    "watch:esbuild": "node esbuild.js --watch",
-    "watch:tsc": "tsc -watch -p ./",
-    "watch": "pnpm run watch:tsc",
-    "pretest": "pnpm run compile && pnpm run lint",
-    "lint": "eslint src --ext ts",
-    "test": "vscode-test"
+    "vscode:prepublish": "node esbuild.js --minify",
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "lint": "eslint src --ext ts"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
