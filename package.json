@@ -47,7 +47,9 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc -watch -p ./",
+    "watch": "npm run watch:tsc",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "vscode-test"
