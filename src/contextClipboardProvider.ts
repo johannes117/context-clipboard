@@ -89,14 +89,70 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         return this.ignoredExtensions.includes(ext);
     }
 
-    toggleSelection(item: FileItem) {
+    async toggleSelection(item: FileItem) {
         const path = item.resourceUri.fsPath;
-        if (this.selectedItems.has(path)) {
-            this.selectedItems.delete(path);
+        const isSelected = this.selectedItems.has(path);
+        
+        // If it's a directory, handle recursive selection
+        if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
+            await this.toggleDirectorySelection(item, !isSelected);
         } else {
-            this.selectedItems.add(path);
+            // For single files, just toggle their selection
+            if (isSelected) {
+                this.selectedItems.delete(path);
+            } else {
+                this.selectedItems.add(path);
+            }
         }
+        
         this.refresh();
+    }
+
+    private async toggleDirectorySelection(item: FileItem, select: boolean) {
+        const dirPath = item.resourceUri.fsPath;
+        
+        // Toggle the directory itself
+        if (select) {
+            this.selectedItems.add(dirPath);
+        } else {
+            this.selectedItems.delete(dirPath);
+        }
+
+        try {
+            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+            
+            for (const entry of entries) {
+                const entryPath = path.join(dirPath, entry.name);
+                
+                // Skip ignored items
+                if (this.shouldIgnore(entryPath, entry.isDirectory())) {
+                    continue;
+                }
+
+                if (entry.isDirectory()) {
+                    // Recursively handle subdirectories
+                    await this.toggleDirectorySelection(
+                        new FileItem(
+                            vscode.Uri.file(entryPath),
+                            entry.name,
+                            vscode.TreeItemCollapsibleState.Collapsed,
+                            select
+                        ),
+                        select
+                    );
+                } else {
+                    // Handle files
+                    if (select) {
+                        this.selectedItems.add(entryPath);
+                    } else {
+                        this.selectedItems.delete(entryPath);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`Error processing directory ${dirPath}:`, error);
+            vscode.window.showErrorMessage(`Failed to process directory: ${dirPath}`);
+        }
     }
 
     async copySelectedToClipboard() {
