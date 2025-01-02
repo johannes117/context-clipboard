@@ -17,7 +17,7 @@
         {
           "id": "context-clipboard-explorer",
           "title": "Context Clipboard",
-          "icon": "media/clipboard.svg"
+          "icon": "media/copy-outline.svg"
         }
       ]
     },
