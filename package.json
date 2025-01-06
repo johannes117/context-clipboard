@@ -27,10 +27,18 @@
       "context-clipboard-explorer": [
         {
           "id": "contextClipboardView",
-          "name": "Context Clipboard"
+          "name": "Context Clipboard",
+          "type": "tree",
+          "visibility": "visible"
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "contextClipboardView",
+        "contents": "No files selected.\n[Select Files](command:contextClipboard.toggleSelection)"
+      }
+    ],
     "commands": [
       {
         "command": "contextClipboard.toggleSelection",
@@ -77,5 +85,8 @@
     "type": "git",
     "url": "https://github.com/contextstudio/context-clipboard"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "js-tiktoken": "^1.0.16"
+  }
 }

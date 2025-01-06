@@ -12,15 +12,34 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
 
     private view?: vscode.TreeView<FileItem>;
 
+    private tokenCount: number = 0;
+    private encoder: any;
+
     constructor(private context: vscode.ExtensionContext) {
+        console.log('Creating tree view...');
         this.view = vscode.window.createTreeView('contextClipboardView', {
             treeDataProvider: this,
             showCollapseAll: true
         });
 
+        console.log('Setting view properties...');
         this.view.title = "Context Clipboard";
         this.view.description = "Select files to copy";
-        this.view.message = undefined;
+        this.view.message = "Tokens Selected: 0";
+        console.log('View message set to:', this.view.message);
+
+        try {
+            console.log('Initializing tiktoken encoder...');
+            import('js-tiktoken').then(tiktoken => {
+                this.encoder = tiktoken.encodingForModel('gpt-4');
+                console.log('Encoder initialized successfully');
+                this.updateTokenCount();
+            }).catch(error => {
+                console.error('Failed to initialize tiktoken encoder:', error);
+            });
+        } catch (error) {
+            console.error('Failed to import tiktoken:', error);
+        }
     }
 
     refresh(): void {
@@ -116,6 +135,7 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             }
         }
         
+        await this.updateTokenCount();
         this.refresh();
     }
 
@@ -164,6 +184,8 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             console.error(`Error processing directory ${dirPath}:`, error);
             vscode.window.showErrorMessage(`Failed to process directory: ${dirPath}`);
         }
+
+        await this.updateTokenCount();
     }
 
     async copySelectedToClipboard() {
@@ -199,7 +221,33 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
 
     clearSelection() {
         this.selectedItems.clear();
+        this.tokenCount = 0;
+        if (this.view) {
+            this.view.message = 'Tokens Selected: 0';
+        }
         this.refresh();
+    }
+
+    private async updateTokenCount() {
+        let totalTokens = 0;
+        
+        for (const filePath of this.selectedItems) {
+            try {
+                const content = await fs.promises.readFile(filePath, 'utf8');
+                const tokens = this.encoder.encode(content);
+                totalTokens += tokens.length;
+            } catch (error) {
+                console.error(`Error counting tokens for ${filePath}:`, error);
+            }
+        }
+        
+        this.tokenCount = totalTokens;
+        if (this.view) {
+            this.view.message = `Tokens Selected: ${this.tokenCount.toLocaleString()}`;
+            console.log('Updated view message to:', this.view.message);
+        } else {
+            console.warn('View is undefined when trying to update token count');
+        }
     }
 }
 
