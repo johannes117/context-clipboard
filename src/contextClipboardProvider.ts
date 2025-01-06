@@ -31,7 +31,7 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         try {
             console.log('Initializing tiktoken encoder...');
             import('js-tiktoken').then(tiktoken => {
-                this.encoder = tiktoken.encodingForModel('gpt-4');
+                this.encoder = tiktoken.encodingForModel('gpt-4o');
                 console.log('Encoder initialized successfully');
                 this.updateTokenCount();
             }).catch(error => {
@@ -126,6 +126,7 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         // If it's a directory, handle recursive selection
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
             await this.toggleDirectorySelection(item, !isSelected);
+            await this.updateTokenCount(); // Only update tokens after directory selection is complete
         } else {
             // For single files, just toggle their selection
             if (isSelected) {
@@ -133,9 +134,9 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             } else {
                 this.selectedItems.add(path);
             }
+            await this.updateTokenCount();
         }
         
-        await this.updateTokenCount();
         this.refresh();
     }
 
@@ -151,41 +152,42 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
 
         try {
             const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-            
-            for (const entry of entries) {
-                const entryPath = path.join(dirPath, entry.name);
-                
-                // Skip ignored items
-                if (this.shouldIgnore(entryPath, entry.isDirectory())) {
-                    continue;
-                }
-
-                if (entry.isDirectory()) {
-                    // Recursively handle subdirectories
-                    await this.toggleDirectorySelection(
-                        new FileItem(
-                            vscode.Uri.file(entryPath),
-                            entry.name,
-                            vscode.TreeItemCollapsibleState.Collapsed,
-                            select
-                        ),
-                        select
-                    );
-                } else {
-                    // Handle files
-                    if (select) {
-                        this.selectedItems.add(entryPath);
-                    } else {
-                        this.selectedItems.delete(entryPath);
+            const processEntries = async () => {
+                const promises = entries.map(async (entry) => {
+                    const entryPath = path.join(dirPath, entry.name);
+                    
+                    if (this.shouldIgnore(entryPath, entry.isDirectory())) {
+                        return;
                     }
-                }
-            }
+
+                    if (entry.isDirectory()) {
+                        await this.toggleDirectorySelection(
+                            new FileItem(
+                                vscode.Uri.file(entryPath),
+                                entry.name,
+                                vscode.TreeItemCollapsibleState.Collapsed,
+                                select
+                            ),
+                            select
+                        );
+                    } else {
+                        if (select) {
+                            this.selectedItems.add(entryPath);
+                        } else {
+                            this.selectedItems.delete(entryPath);
+                        }
+                    }
+                });
+
+                await Promise.all(promises);
+            };
+
+            await processEntries();
+            
         } catch (error) {
             console.error(`Error processing directory ${dirPath}:`, error);
             vscode.window.showErrorMessage(`Failed to process directory: ${dirPath}`);
         }
-
-        await this.updateTokenCount();
     }
 
     async copySelectedToClipboard() {
