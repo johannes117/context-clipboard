@@ -68,25 +68,27 @@
     "vscode:prepublish": "node esbuild.js --minify",
     "compile": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "package": "npm run vscode:prepublish && vsce package"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "18.x",
+    "@types/node": "^18.19.69",
     "@types/vscode": "^1.86.0",
-    "@typescript-eslint/eslint-plugin": "^6.9.0",
-    "@typescript-eslint/parser": "^6.9.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vscode/vsce": "^3.2.1",
     "esbuild": "^0.20.0",
-    "eslint": "^8.52.0",
-    "typescript": "^5.2.2"
+    "eslint": "^8.57.1",
+    "typescript": "^5.7.2"
   },
-  "packageManager": "pnpm@9.9.0+sha512.60c18acd138bff695d339be6ad13f7e936eea6745660d4cc4a776d5247c540d0edee1a563695c183a66eb917ef88f2b4feb1fc25f32a7adcadc7aaf3438e99c1",
   "repository": {
     "type": "git",
     "url": "https://github.com/contextstudio/context-clipboard"
   },
   "license": "MIT",
   "dependencies": {
-    "js-tiktoken": "^1.0.16"
+    "js-tiktoken": "^1.0.16",
+    "@vscode/vsce": "^3.2.1"
   }
 }
