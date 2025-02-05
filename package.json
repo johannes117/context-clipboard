@@ -50,16 +50,22 @@
       },
       {
         "command": "contextClipboard.clearSelection",
-        "title": "Clear Selection"
+        "title": "Clear"
       }
     ],
     "menus": {
       "view/title": [
         {
+          "command": "contextClipboard.clearSelection",
+          "when": "view == contextClipboardView",
+          "group": "navigation@1",
+          "title": "$(clear-all) Clear"
+        },
+        {
           "command": "contextClipboard.copyToClipboard",
           "when": "view == contextClipboardView",
-          "group": "navigation",
-          "title": "$(copy)"
+          "group": "navigation@2",
+          "title": "$(copy) Copy Context"
         }
       ]
     }
