@@ -19,7 +19,8 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         console.log('Creating tree view...');
         this.view = vscode.window.createTreeView('contextClipboardView', {
             treeDataProvider: this,
-            showCollapseAll: true
+            showCollapseAll: true,
+            canSelectMany: true  // Enable checkbox support
         });
 
         console.log('Setting view properties...');
@@ -27,6 +28,9 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         this.view.description = "Select files to copy";
         this.view.message = "Tokens Selected: 0";
         console.log('View message set to:', this.view.message);
+
+        // Add checkbox change handler
+        this.view.onDidChangeCheckboxState(this.handleCheckboxChange, this);
 
         try {
             console.log('Initializing tiktoken encoder...');
@@ -39,6 +43,36 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             });
         } catch (error) {
             console.error('Failed to import tiktoken:', error);
+        }
+    }
+
+    private async handleCheckboxChange(e: vscode.TreeCheckboxChangeEvent<FileItem>) {
+        let updated = false;
+        for (const [item, state] of e.items) {
+            const path = item.resourceUri.fsPath;
+            
+            if (state === vscode.TreeItemCheckboxState.Checked) {
+                // Handle directory selection
+                if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
+                    await this.toggleDirectorySelection(item, true);
+                } else {
+                    this.selectedItems.add(path);
+                }
+                updated = true;
+            } else {
+                // Handle directory deselection
+                if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
+                    await this.toggleDirectorySelection(item, false);
+                } else {
+                    this.selectedItems.delete(path);
+                }
+                updated = true;
+            }
+        }
+        
+        if (updated) {
+            await this.updateTokenCount();
+            this.refresh();
         }
     }
 
@@ -123,17 +157,9 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         const path = item.resourceUri.fsPath;
         const isSelected = this.selectedItems.has(path);
         
-        // If it's a directory, handle recursive selection
+        // For directories, maintain recursive selection behavior
         if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
             await this.toggleDirectorySelection(item, !isSelected);
-            await this.updateTokenCount(); // Only update tokens after directory selection is complete
-        } else {
-            // For single files, just toggle their selection
-            if (isSelected) {
-                this.selectedItems.delete(path);
-            } else {
-                this.selectedItems.add(path);
-            }
             await this.updateTokenCount();
         }
         
@@ -161,15 +187,13 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
                     }
 
                     if (entry.isDirectory()) {
-                        await this.toggleDirectorySelection(
-                            new FileItem(
-                                vscode.Uri.file(entryPath),
-                                entry.name,
-                                vscode.TreeItemCollapsibleState.Collapsed,
-                                select
-                            ),
+                        const newItem = new FileItem(
+                            vscode.Uri.file(entryPath),
+                            entry.name,
+                            vscode.TreeItemCollapsibleState.Collapsed,
                             select
                         );
+                        await this.toggleDirectorySelection(newItem, select);
                     } else {
                         if (select) {
                             this.selectedItems.add(entryPath);
@@ -269,17 +293,19 @@ class FileItem extends vscode.TreeItem {
             // Style for message item
             this.iconPath = new vscode.ThemeIcon('info');
         } else {
-            // Use VSCode's built-in icons with proper codicon names
-            this.iconPath = new vscode.ThemeIcon(
-                selected ? 'check' : 'debug-stop',
-                selected ? undefined : new vscode.ThemeColor('foreground')
-            );
+            // Set checkbox state
+            this.checkboxState = selected 
+                ? vscode.TreeItemCheckboxState.Checked 
+                : vscode.TreeItemCheckboxState.Unchecked;
             
-            this.command = {
-                command: 'contextClipboard.toggleSelection',
-                title: 'Toggle Selection',
-                arguments: [this]
-            };
+            // Add file opening command for non-directory items
+            if (!this.collapsibleState) {
+                this.command = {
+                    command: 'vscode.open',
+                    title: 'Open File',
+                    arguments: [this.resourceUri]
+                };
+            }
         }
     }
 
