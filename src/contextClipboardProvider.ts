@@ -20,7 +20,8 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         this.view = vscode.window.createTreeView('contextClipboardView', {
             treeDataProvider: this,
             showCollapseAll: true,
-            canSelectMany: true  // Enable checkbox support
+            canSelectMany: true,
+            manageCheckboxStateManually: true
         });
 
         console.log('Setting view properties...');
@@ -29,8 +30,25 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         this.view.message = "Tokens Selected: 0";
         console.log('View message set to:', this.view.message);
 
-        // Add checkbox change handler
-        this.view.onDidChangeCheckboxState(this.handleCheckboxChange, this);
+        // Replace method binding with arrow function to preserve context
+        this.view.onDidChangeCheckboxState(async (e) => {
+            let updated = false;
+            for (const [item, state] of e.items) {
+                console.log(`Checkbox for "${item.label}" changed to ${state}`);
+                const filePath = item.resourceUri.fsPath;
+                if (state === vscode.TreeItemCheckboxState.Checked) {
+                    this.selectedItems.add(filePath);
+                } else {
+                    this.selectedItems.delete(filePath);
+                }
+                updated = true;
+            }
+            console.log("Selected items now:", Array.from(this.selectedItems));
+            if (updated) {
+                await this.updateTokenCount();
+                this.refresh();
+            }
+        });
 
         try {
             console.log('Initializing tiktoken encoder...');
@@ -43,36 +61,6 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             });
         } catch (error) {
             console.error('Failed to import tiktoken:', error);
-        }
-    }
-
-    private async handleCheckboxChange(e: vscode.TreeCheckboxChangeEvent<FileItem>) {
-        let updated = false;
-        for (const [item, state] of e.items) {
-            const path = item.resourceUri.fsPath;
-            
-            if (state === vscode.TreeItemCheckboxState.Checked) {
-                // Handle directory selection
-                if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
-                    await this.toggleDirectorySelection(item, true);
-                } else {
-                    this.selectedItems.add(path);
-                }
-                updated = true;
-            } else {
-                // Handle directory deselection
-                if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
-                    await this.toggleDirectorySelection(item, false);
-                } else {
-                    this.selectedItems.delete(path);
-                }
-                updated = true;
-            }
-        }
-        
-        if (updated) {
-            await this.updateTokenCount();
-            this.refresh();
         }
     }
 
@@ -151,67 +139,6 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
 
         const ext = path.extname(resourcePath);
         return this.ignoredExtensions.includes(ext);
-    }
-
-    async toggleSelection(item: FileItem) {
-        const path = item.resourceUri.fsPath;
-        const isSelected = this.selectedItems.has(path);
-        
-        // For directories, maintain recursive selection behavior
-        if (item.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
-            await this.toggleDirectorySelection(item, !isSelected);
-            await this.updateTokenCount();
-        }
-        
-        this.refresh();
-    }
-
-    private async toggleDirectorySelection(item: FileItem, select: boolean) {
-        const dirPath = item.resourceUri.fsPath;
-        
-        // Toggle the directory itself
-        if (select) {
-            this.selectedItems.add(dirPath);
-        } else {
-            this.selectedItems.delete(dirPath);
-        }
-
-        try {
-            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-            const processEntries = async () => {
-                const promises = entries.map(async (entry) => {
-                    const entryPath = path.join(dirPath, entry.name);
-                    
-                    if (this.shouldIgnore(entryPath, entry.isDirectory())) {
-                        return;
-                    }
-
-                    if (entry.isDirectory()) {
-                        const newItem = new FileItem(
-                            vscode.Uri.file(entryPath),
-                            entry.name,
-                            vscode.TreeItemCollapsibleState.Collapsed,
-                            select
-                        );
-                        await this.toggleDirectorySelection(newItem, select);
-                    } else {
-                        if (select) {
-                            this.selectedItems.add(entryPath);
-                        } else {
-                            this.selectedItems.delete(entryPath);
-                        }
-                    }
-                });
-
-                await Promise.all(promises);
-            };
-
-            await processEntries();
-            
-        } catch (error) {
-            console.error(`Error processing directory ${dirPath}:`, error);
-            vscode.window.showErrorMessage(`Failed to process directory: ${dirPath}`);
-        }
     }
 
     async copySelectedToClipboard() {
@@ -297,15 +224,6 @@ class FileItem extends vscode.TreeItem {
             this.checkboxState = selected 
                 ? vscode.TreeItemCheckboxState.Checked 
                 : vscode.TreeItemCheckboxState.Unchecked;
-            
-            // Add file opening command for non-directory items
-            if (!this.collapsibleState) {
-                this.command = {
-                    command: 'vscode.open',
-                    title: 'Open File',
-                    arguments: [this.resourceUri]
-                };
-            }
         }
     }
 
