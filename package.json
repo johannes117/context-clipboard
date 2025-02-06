@@ -78,6 +78,16 @@
           "group": "navigation@0"
         }
       ]
+    },
+    "configuration": {
+      "title": "Context Clipboard",
+      "properties": {
+        "contextClipboard.includeFileTree": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include file tree structure in copied context"
+        }
+      }
     }
   },
   "scripts": {

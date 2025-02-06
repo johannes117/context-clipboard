@@ -210,14 +210,19 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             return;
         }
 
-        let output = '<file_tree>\n';
+        let output = '';
+        const includeFileTree = vscode.workspace.getConfiguration('contextClipboard').get('includeFileTree', false);
+        
+        if (includeFileTree) {
+            output = '<file_tree>\n';
+            for (const filePath of this.selectedItems) {
+                output += `├── ${path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath)}\n`;
+            }
+            output += '</file_tree>\n\n';
+        }
+
         let fileContents = '<file_contents>\n';
-
         for (const filePath of this.selectedItems) {
-            // Add to file tree
-            output += `├── ${path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath)}\n`;
-
-            // Add file contents
             try {
                 const content = await fs.promises.readFile(filePath, 'utf8');
                 const relativePath = path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath);
@@ -226,8 +231,6 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
                 console.error(`Error reading file ${filePath}:`, error);
             }
         }
-
-        output += '</file_tree>\n\n';
         fileContents += '</file_contents>';
 
         const finalOutput = output + fileContents;
