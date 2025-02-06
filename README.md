@@ -77,7 +77,7 @@ Please report any issues on our [GitHub repository](https://github.com/yourusern
 
 ## Release Notes
 
-### 0.0.4
+### 0.1.0
 - Added configurable context output formatting
 - Implemented view management commands (refresh, clear)
 - Enhanced navigation menu with optimized command grouping

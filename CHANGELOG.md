@@ -4,7 +4,7 @@ All notable changes to the "context-clipboard" extension will be documented in t
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [0.0.4] - 2025-02-06
+## [0.1.0] - 2025-02-06
 
 ### Added
 - Configurable context output format with granular control:
