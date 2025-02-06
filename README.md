@@ -10,6 +10,7 @@ A Visual Studio Code extension that streamlines the process of selecting and ext
 - ⚡ **Performance Optimized**: Efficiently handles large codebases with asynchronous processing
 - 🔄 **Universal Compatibility**: Supports all file types that VS Code can open
 - 🎨 **Native Integration**: Follows VS Code's UI patterns for a seamless experience
+- 🛠️ **Configurable Output**: Customize context format with file trees and custom prompts
 
 ## Installation
 
@@ -34,6 +35,37 @@ This extension contributes the following settings:
 * `contextClipboard.excludePatterns`: Glob patterns for files to exclude from selection
 * `contextClipboard.formatTemplate`: Custom template for context output formatting
 * `contextClipboard.tokenModel`: Token counting model to use (default: 'gpt-4o')
+* `contextClipboard.includeFileTree`: Toggle inclusion of file tree structure in output
+* `contextClipboard.includeUserPrompt`: Enable custom prompts in context output
+* `contextClipboard.userPromptText`: Define custom prompt text for context
+
+### Accessing Settings
+
+You can configure Context Clipboard settings in several ways:
+
+1. Command Palette:
+   - Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac)
+   - Type "Settings" and select "Preferences: Open Settings (UI)"
+   - Search for "Context Clipboard"
+
+2. Settings UI:
+   - Click the gear icon (⚙️) in the lower left corner
+   - Select "Settings"
+   - Search for "Context Clipboard"
+
+3. Settings File (settings.json):
+   - Open Command Palette
+   - Type "Settings" and select "Preferences: Open User Settings (JSON)"
+   - Add your settings:
+   ```json
+   {
+     "contextClipboard.includeFileTree": true,
+     "contextClipboard.includeUserPrompt": true,
+     "contextClipboard.userPromptText": "Your custom prompt here"
+   }
+   ```
+
+All settings changes take effect immediately without requiring a restart.
 
 ## Requirements
 
@@ -44,6 +76,12 @@ This extension contributes the following settings:
 Please report any issues on our [GitHub repository](https://github.com/yourusername/context-clipboard/issues).
 
 ## Release Notes
+
+### 0.0.4
+- Added configurable context output formatting
+- Implemented view management commands (refresh, clear)
+- Enhanced navigation menu with optimized command grouping
+- Improved async file processing and error handling
 
 ### 0.0.3
 - Initial release of Context Clipboard

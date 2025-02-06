@@ -4,6 +4,33 @@ All notable changes to the "context-clipboard" extension will be documented in t
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.0.4] - 2025-02-06
+
+### Added
+- Configurable context output format with granular control:
+  - `contextClipboard.includeFileTree`: Toggle file tree structure inclusion
+  - `contextClipboard.includeUserPrompt`: Enable custom prompts in context
+  - `contextClipboard.userPromptText`: Define prompt text, defaults to terse technical communication style
+- View management commands:
+  - `refresh`: Verify file existence and update token counts
+  - `clear`: Reset all selections efficiently
+- Streamlined navigation menu with optimized command grouping and icons:
+  - Files icon for context copying
+  - Clear-all icon for selection reset
+  - Refresh icon for view updates
+
+### Enhanced
+- Async file verification in refresh operation
+- Token count updates after file system changes
+- Directory processing optimization
+- UI/UX improvements with simplified command titles
+
+### Technical Details
+- Implemented async/await pattern for file system operations
+- Added configuration schema validation
+- Enhanced error handling for file access operations
+- Optimized view state management
+
 ## [0.0.3] - 2025-01-06
 
 ### Added
