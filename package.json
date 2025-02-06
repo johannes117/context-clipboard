@@ -46,11 +46,13 @@
       },
       {
         "command": "contextClipboard.copyToClipboard",
-        "title": "Copy Context"
+        "title": "Copy Context",
+        "icon": "$(files)"
       },
       {
         "command": "contextClipboard.clearSelection",
-        "title": "Clear"
+        "title": "Clear",
+        "icon": "$(clear-all)"
       },
       {
         "command": "contextClipboard.refresh",
@@ -63,20 +65,17 @@
         {
           "command": "contextClipboard.clearSelection",
           "when": "view == contextClipboardView",
-          "group": "navigation@1",
-          "title": "$(clear-all) Clear"
+          "group": "navigation@1"
         },
         {
           "command": "contextClipboard.copyToClipboard",
           "when": "view == contextClipboardView",
-          "group": "navigation@2",
-          "title": "$(copy) Copy Context"
+          "group": "navigation@2"
         },
         {
           "command": "contextClipboard.refresh",
           "when": "view == contextClipboardView",
-          "group": "navigation@0",
-          "title": "$(refresh) Refresh"
+          "group": "navigation@0"
         }
       ]
     }
