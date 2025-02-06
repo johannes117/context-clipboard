@@ -51,6 +51,11 @@
       {
         "command": "contextClipboard.clearSelection",
         "title": "Clear"
+      },
+      {
+        "command": "contextClipboard.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -66,6 +71,12 @@
           "when": "view == contextClipboardView",
           "group": "navigation@2",
           "title": "$(copy) Copy Context"
+        },
+        {
+          "command": "contextClipboard.refresh",
+          "when": "view == contextClipboardView",
+          "group": "navigation@0",
+          "title": "$(refresh) Refresh"
         }
       ]
     }

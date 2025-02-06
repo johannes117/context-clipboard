@@ -42,7 +42,21 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         }
     }
 
-    refresh(): void {
+    async refresh(): Promise<void> {
+        // Verify all selected files still exist and remove any that don't
+        for (const filePath of this.selectedItems) {
+            try {
+                await fs.promises.access(filePath);
+            } catch (error) {
+                // File no longer exists, remove it from selection
+                this.selectedItems.delete(filePath);
+            }
+        }
+
+        // Update token count with remaining valid files
+        await this.updateTokenCount();
+        
+        // Refresh the tree view
         this._onDidChangeTreeData.fire();
     }
 

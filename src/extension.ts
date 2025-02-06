@@ -41,10 +41,19 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	);
 
+	let refreshCommand = vscode.commands.registerCommand(
+		'contextClipboard.refresh',
+		async () => {
+			await contextClipboardProvider.refresh();
+			vscode.window.showInformationMessage('Context Clipboard refreshed');
+		}
+	);
+
 	// Register all commands
 	context.subscriptions.push(toggleSelection);
 	context.subscriptions.push(copyToClipboard);
 	context.subscriptions.push(clearSelection);
+	context.subscriptions.push(refreshCommand);
 }
 
 // This method is called when your extension is deactivated
