@@ -85,7 +85,21 @@
         "contextClipboard.includeFileTree": {
           "type": "boolean",
           "default": false,
-          "description": "Include file tree structure in copied context"
+          "description": "Include file tree structure in copied context",
+          "order": 1
+        },
+        "contextClipboard.includeUserPrompt": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include a custom user prompt in copied context",
+          "order": 2
+        },
+        "contextClipboard.userPromptText": {
+          "type": "string",
+          "default": "Deliver terse, technical solutions with direct, expert-level communication",
+          "description": "Custom prompt text to include in copied context when 'Include User Prompt' is enabled",
+          "editPresentation": "multilineText",
+          "order": 3
         }
       }
     }

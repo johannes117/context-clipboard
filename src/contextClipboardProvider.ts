@@ -210,17 +210,31 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             return;
         }
 
+        const config = vscode.workspace.getConfiguration('contextClipboard');
         let output = '';
-        const includeFileTree = vscode.workspace.getConfiguration('contextClipboard').get('includeFileTree', false);
-        
+
+        // Add user prompt if enabled
+        const includeUserPrompt = config.get('includeUserPrompt', false);
+        if (includeUserPrompt) {
+            const promptText = config.get('userPromptText', '');
+            if (promptText) {
+                output += '<user_prompt>\n';
+                output += promptText + '\n';
+                output += '</user_prompt>\n\n';
+            }
+        }
+
+        // Add file tree if enabled
+        const includeFileTree = config.get('includeFileTree', false);
         if (includeFileTree) {
-            output = '<file_tree>\n';
+            output += '<file_tree>\n';
             for (const filePath of this.selectedItems) {
                 output += `├── ${path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath)}\n`;
             }
             output += '</file_tree>\n\n';
         }
 
+        // Add file contents
         let fileContents = '<file_contents>\n';
         for (const filePath of this.selectedItems) {
             try {
