@@ -11,6 +11,8 @@ A Visual Studio Code extension that streamlines the process of selecting and ext
 - 🔄 **Universal Compatibility**: Supports all file types that VS Code can open
 - 🎨 **Native Integration**: Follows VS Code's UI patterns for a seamless experience
 - 🛠️ **Configurable Output**: Customize context format with file trees and custom prompts
+- 🔄 **Git Diff Integration**: Include Git diffs with your selected comparison branch
+- 🔘 **Quick Toggle Controls**: Easily enable/disable features directly from the toolbar
 
 ## Installation
 
@@ -24,8 +26,10 @@ A Visual Studio Code extension that streamlines the process of selecting and ext
 1. Open your project in VS Code
 2. In the explorer view, use the checkbox icons to select files and directories
 3. Monitor token usage in real-time as you select files
-4. Click the "Copy Context" button in the explorer view toolbar
-5. Paste the formatted content into your preferred LLM chat interface
+4. Use the toolbar toggle buttons to enable/disable Git diff, file tree, or user prompt inclusion
+5. If using Git diff, select your comparison branch using the branch selector button
+6. Click the "Copy Context" button in the explorer view toolbar
+7. Paste the formatted content into your preferred LLM chat interface
 
 ## Extension Settings
 
@@ -38,6 +42,8 @@ This extension contributes the following settings:
 * `contextClipboard.includeFileTree`: Toggle inclusion of file tree structure in output
 * `contextClipboard.includeUserPrompt`: Enable custom prompts in context output
 * `contextClipboard.userPromptText`: Define custom prompt text for context
+* `contextClipboard.includeGitDiff`: Toggle inclusion of Git diff in output
+* `contextClipboard.gitComparisonBranch`: Specify which Git branch to compare with (default: 'main')
 
 ### Accessing Settings
 
@@ -61,9 +67,17 @@ You can configure Context Clipboard settings in several ways:
    {
      "contextClipboard.includeFileTree": true,
      "contextClipboard.includeUserPrompt": true,
-     "contextClipboard.userPromptText": "Your custom prompt here"
+     "contextClipboard.userPromptText": "Your custom prompt here",
+     "contextClipboard.includeGitDiff": true,
+     "contextClipboard.gitComparisonBranch": "main"
    }
    ```
+
+4. Toolbar Toggle Buttons:
+   - Use the toggle buttons in the Context Clipboard toolbar to quickly enable/disable features
+   - Git diff: Toggle Git diff inclusion
+   - File tree: Toggle file tree inclusion
+   - User prompt: Toggle user prompt inclusion
 
 All settings changes take effect immediately without requiring a restart.
 
@@ -77,13 +91,20 @@ Please report any issues on our [GitHub repository](https://github.com/yourusern
 
 ## Release Notes
 
-### 0.1.0
+### 0.3.0
+- Added Git diff integration with branch selection
+- Implemented toggle buttons for quick feature enabling/disabling
+- Enhanced token counting to include all content types
+- Improved UI with status indicators for enabled features
+- Added support for copying content without file selection
+
+### 0.2.0
 - Added configurable context output formatting
 - Implemented view management commands (refresh, clear)
 - Enhanced navigation menu with optimized command grouping
 - Improved async file processing and error handling
 
-### 0.0.3
+### 0.1.0
 - Initial release of Context Clipboard
 - Added real-time token counting with js-tiktoken
 - Basic file and directory selection functionality
