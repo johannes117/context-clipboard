@@ -210,13 +210,10 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
     }
 
     async copySelectedToClipboard() {
-        if (this.selectedItems.size === 0) {
-            vscode.window.showInformationMessage('No files selected');
-            return;
-        }
-
         const config = vscode.workspace.getConfiguration('contextClipboard');
         let output = '';
+        let hasContent = false;
+        let contentTypes = [];
 
         // Add user prompt if enabled
         const includeUserPrompt = config.get('includeUserPrompt', false);
@@ -226,17 +223,21 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
                 output += '<user_prompt>\n';
                 output += promptText + '\n';
                 output += '</user_prompt>\n\n';
+                hasContent = true;
+                contentTypes.push('user prompt');
             }
         }
 
-        // Add file tree if enabled
+        // Add file tree if enabled and files are selected
         const includeFileTree = config.get('includeFileTree', false);
-        if (includeFileTree) {
+        if (includeFileTree && this.selectedItems.size > 0) {
             output += '<file_tree>\n';
             for (const filePath of this.selectedItems) {
                 output += `├── ${path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath)}\n`;
             }
             output += '</file_tree>\n\n';
+            hasContent = true;
+            contentTypes.push('file tree');
         }
 
         // Add Git diff if enabled
@@ -248,25 +249,37 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
                 output += `<git_diff branch="${comparisonBranch}">\n`;
                 output += gitDiff;
                 output += '</git_diff>\n\n';
+                hasContent = true;
+                contentTypes.push('git diff');
             }
         }
 
-        // Add file contents
-        let fileContents = '<file_contents>\n';
-        for (const filePath of this.selectedItems) {
-            try {
-                const content = await fs.promises.readFile(filePath, 'utf8');
-                const relativePath = path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath);
-                fileContents += `File: ${relativePath}\n\`\`\`\n${content}\n\`\`\`\n\n`;
-            } catch (error) {
-                console.error(`Error reading file ${filePath}:`, error);
+        // Add file contents if files are selected
+        if (this.selectedItems.size > 0) {
+            let fileContents = '<file_contents>\n';
+            for (const filePath of this.selectedItems) {
+                try {
+                    const content = await fs.promises.readFile(filePath, 'utf8');
+                    const relativePath = path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath);
+                    fileContents += `File: ${relativePath}\n\`\`\`\n${content}\n\`\`\`\n\n`;
+                } catch (error) {
+                    console.error(`Error reading file ${filePath}:`, error);
+                }
             }
+            fileContents += '</file_contents>';
+            output += fileContents;
+            hasContent = true;
+            contentTypes.push(`${this.selectedItems.size} file${this.selectedItems.size > 1 ? 's' : ''}`);
         }
-        fileContents += '</file_contents>';
 
-        const finalOutput = output + fileContents;
-        await vscode.env.clipboard.writeText(finalOutput);
-        vscode.window.showInformationMessage('Selected files copied to clipboard');
+        // Check if there's any content to copy
+        if (!hasContent) {
+            vscode.window.showInformationMessage('No content to copy. Enable Git diff, file tree, user prompt, or select files.');
+            return;
+        }
+
+        await vscode.env.clipboard.writeText(output);
+        vscode.window.showInformationMessage(`Copied to clipboard: ${contentTypes.join(', ')}`);
     }
 
     clearSelection() {
@@ -337,7 +350,7 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             }
         }
         
-        // Count tokens for file tree if enabled
+        // Count tokens for file tree if enabled and files are selected
         const includeFileTree = config.get('includeFileTree', false);
         if (includeFileTree && this.selectedItems.size > 0) {
             let fileTreeText = '<file_tree>\n';
@@ -489,7 +502,7 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         // Update view description to show enabled options
         const enabledOptions = [];
         if (gitDiffEnabled) {enabledOptions.push('Git Diff');}
-        if (fileTreeEnabled) {enabledOptions.push('File Tree');}
+        if (fileTreeEnabled && this.selectedItems.size > 0) {enabledOptions.push('File Tree');}
         if (userPromptEnabled) {enabledOptions.push('User Prompt');}
 
         if (this.view) {
@@ -502,7 +515,7 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             // Update the view message to include a single indicator for enabled options
             const enabledLabels = [];
             if (gitDiffEnabled) {enabledLabels.push('Git');}
-            if (fileTreeEnabled) {enabledLabels.push('Tree');}
+            if (fileTreeEnabled && this.selectedItems.size > 0) {enabledLabels.push('Tree');}
             if (userPromptEnabled) {enabledLabels.push('Prompt');}
             
             let message = `Tokens: ${this.tokenCount.toLocaleString()}`;
