@@ -3,7 +3,7 @@
   "displayName": "Context Clipboard",
   "publisher": "contextstudio",
   "description": "Select and extract code files for LLM chat interfaces",
-  "version": "0.3.0",
+  "version": "0.2.0",
   "icon": "media/icon-512-maskable.png",
   "engines": {
     "vscode": "^1.86.0"
