@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as cp from 'child_process';
+import { promisify } from 'util';
 
 export class ContextClipboardProvider implements vscode.TreeDataProvider<FileItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<FileItem | undefined | null | void> = new vscode.EventEmitter<FileItem | undefined | null | void>();
@@ -234,6 +236,18 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             output += '</file_tree>\n\n';
         }
 
+        // Add Git diff if enabled
+        const includeGitDiff = config.get('includeGitDiff', false);
+        if (includeGitDiff && vscode.workspace.workspaceFolders) {
+            const gitDiff = await this.getGitDiff();
+            if (gitDiff) {
+                const comparisonBranch = config.get('gitComparisonBranch', 'main');
+                output += `<git_diff branch="${comparisonBranch}">\n`;
+                output += gitDiff;
+                output += '</git_diff>\n\n';
+            }
+        }
+
         // Add file contents
         let fileContents = '<file_contents>\n';
         for (const filePath of this.selectedItems) {
@@ -280,6 +294,79 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             console.log('Updated view message to:', this.view.message);
         } else {
             console.warn('View is undefined when trying to update token count');
+        }
+    }
+
+    async selectComparisonBranch() {
+        try {
+            const branches = await this.getGitBranches();
+            if (!branches || branches.length === 0) {
+                vscode.window.showErrorMessage('No Git branches found');
+                return;
+            }
+
+            const selectedBranch = await vscode.window.showQuickPick(branches, {
+                placeHolder: 'Select a branch to compare with',
+                canPickMany: false
+            });
+
+            if (selectedBranch) {
+                const config = vscode.workspace.getConfiguration('contextClipboard');
+                await config.update('gitComparisonBranch', selectedBranch, vscode.ConfigurationTarget.Workspace);
+                vscode.window.showInformationMessage(`Git comparison branch set to: ${selectedBranch}`);
+            }
+        } catch (error) {
+            console.error('Error selecting comparison branch:', error);
+            vscode.window.showErrorMessage('Failed to get Git branches');
+        }
+    }
+
+    private async getGitBranches(): Promise<string[] | undefined> {
+        if (!vscode.workspace.workspaceFolders) {
+            return undefined;
+        }
+
+        const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        const exec = promisify(cp.exec);
+
+        try {
+            const { stdout } = await exec('git branch --format="%(refname:short)"', { cwd: workspaceRoot });
+            return stdout.split('\n')
+                .map(branch => branch.trim())
+                .filter(branch => branch.length > 0);
+        } catch (error) {
+            console.error('Error getting Git branches:', error);
+            return undefined;
+        }
+    }
+
+    private async getGitDiff(): Promise<string | undefined> {
+        if (!vscode.workspace.workspaceFolders) {
+            return undefined;
+        }
+
+        const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        const comparisonBranch = config.get('gitComparisonBranch', 'main');
+        const exec = promisify(cp.exec);
+
+        try {
+            // Get the diff in a format that's readable for LLMs
+            const { stdout } = await exec(`git diff ${comparisonBranch} --unified=3 --no-color`, { 
+                cwd: workspaceRoot,
+                maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large diffs
+            });
+            
+            if (!stdout.trim()) {
+                vscode.window.showInformationMessage(`No changes detected compared to ${comparisonBranch}`);
+                return undefined;
+            }
+            
+            return stdout;
+        } catch (error) {
+            console.error('Error getting Git diff:', error);
+            vscode.window.showErrorMessage(`Failed to get Git diff with ${comparisonBranch}`);
+            return undefined;
         }
     }
 }

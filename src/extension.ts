@@ -49,11 +49,19 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	);
 
+	let selectComparisonBranchCommand = vscode.commands.registerCommand(
+		'contextClipboard.selectComparisonBranch',
+		async () => {
+			await contextClipboardProvider.selectComparisonBranch();
+		}
+	);
+
 	// Register all commands
 	context.subscriptions.push(toggleSelection);
 	context.subscriptions.push(copyToClipboard);
 	context.subscriptions.push(clearSelection);
 	context.subscriptions.push(refreshCommand);
+	context.subscriptions.push(selectComparisonBranchCommand);
 }
 
 // This method is called when your extension is deactivated

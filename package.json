@@ -58,6 +58,11 @@
         "command": "contextClipboard.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "contextClipboard.selectComparisonBranch",
+        "title": "Select Git Comparison Branch",
+        "icon": "$(git-branch)"
       }
     ],
     "menus": {
@@ -76,6 +81,11 @@
           "command": "contextClipboard.refresh",
           "when": "view == contextClipboardView",
           "group": "navigation@0"
+        },
+        {
+          "command": "contextClipboard.selectComparisonBranch",
+          "when": "view == contextClipboardView",
+          "group": "navigation@3"
         }
       ]
     },
@@ -100,6 +110,18 @@
           "description": "Custom prompt text to include in copied context when 'Include User Prompt' is enabled",
           "editPresentation": "multilineText",
           "order": 3
+        },
+        "contextClipboard.includeGitDiff": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include Git diff with comparison branch in copied context",
+          "order": 4
+        },
+        "contextClipboard.gitComparisonBranch": {
+          "type": "string",
+          "default": "main",
+          "description": "Git branch to compare with when including Git diff",
+          "order": 5
         }
       }
     }
