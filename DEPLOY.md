@@ -5,7 +5,7 @@ This document outlines the steps to deploy a new version of the Context Clipboar
 ## Prerequisites
 
 1. Make sure you have a Personal Access Token (PAT) from Azure DevOps
-   - Go to https://dev.azure.com
+   - Go to https://dev.azure.com/vscode
    - Click on your profile icon
    - Select "Personal access tokens"
    - Create a new token with "Marketplace (publish)" scope
