@@ -56,12 +56,36 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	);
 
+	let toggleGitDiffCommand = vscode.commands.registerCommand(
+		'contextClipboard.toggleGitDiff',
+		async () => {
+			await contextClipboardProvider.toggleGitDiff();
+		}
+	);
+
+	let toggleFileTreeCommand = vscode.commands.registerCommand(
+		'contextClipboard.toggleFileTree',
+		async () => {
+			await contextClipboardProvider.toggleFileTree();
+		}
+	);
+
+	let toggleUserPromptCommand = vscode.commands.registerCommand(
+		'contextClipboard.toggleUserPrompt',
+		async () => {
+			await contextClipboardProvider.toggleUserPrompt();
+		}
+	);
+
 	// Register all commands
 	context.subscriptions.push(toggleSelection);
 	context.subscriptions.push(copyToClipboard);
 	context.subscriptions.push(clearSelection);
 	context.subscriptions.push(refreshCommand);
 	context.subscriptions.push(selectComparisonBranchCommand);
+	context.subscriptions.push(toggleGitDiffCommand);
+	context.subscriptions.push(toggleFileTreeCommand);
+	context.subscriptions.push(toggleUserPromptCommand);
 }
 
 // This method is called when your extension is deactivated

@@ -30,6 +30,9 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         this.view.message = "Tokens Selected: 0";
         console.log('View message set to:', this.view.message);
 
+        // Update the command icons based on current settings
+        this.updateCommandIcons();
+
         try {
             console.log('Initializing tiktoken encoder...');
             import('js-tiktoken').then(tiktoken => {
@@ -275,6 +278,30 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         this.refresh();
     }
 
+    async toggleGitDiff() {
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        const currentValue = config.get('includeGitDiff', false);
+        await config.update('includeGitDiff', !currentValue, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`Include Git Diff: ${!currentValue ? 'Enabled' : 'Disabled'}`);
+        this.updateCommandIcons();
+    }
+
+    async toggleFileTree() {
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        const currentValue = config.get('includeFileTree', false);
+        await config.update('includeFileTree', !currentValue, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`Include File Tree: ${!currentValue ? 'Enabled' : 'Disabled'}`);
+        this.updateCommandIcons();
+    }
+
+    async toggleUserPrompt() {
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        const currentValue = config.get('includeUserPrompt', false);
+        await config.update('includeUserPrompt', !currentValue, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`Include User Prompt: ${!currentValue ? 'Enabled' : 'Disabled'}`);
+        this.updateCommandIcons();
+    }
+
     private async updateTokenCount() {
         let totalTokens = 0;
         
@@ -367,6 +394,56 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             console.error('Error getting Git diff:', error);
             vscode.window.showErrorMessage(`Failed to get Git diff with ${comparisonBranch}`);
             return undefined;
+        }
+    }
+
+    private async updateCommandIcons() {
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        const gitDiffEnabled = config.get('includeGitDiff', false);
+        const fileTreeEnabled = config.get('includeFileTree', false);
+        const userPromptEnabled = config.get('includeUserPrompt', false);
+
+        // Update command titles to show current state
+        await vscode.commands.executeCommand(
+            'setContext', 
+            'contextClipboard.gitDiffEnabled', 
+            gitDiffEnabled
+        );
+        await vscode.commands.executeCommand(
+            'setContext', 
+            'contextClipboard.fileTreeEnabled', 
+            fileTreeEnabled
+        );
+        await vscode.commands.executeCommand(
+            'setContext', 
+            'contextClipboard.userPromptEnabled', 
+            userPromptEnabled
+        );
+
+        // Update command titles
+        const gitDiffCommand = await vscode.commands.getCommands(true).then(
+            cmds => cmds.find(c => c === 'contextClipboard.toggleGitDiff')
+        );
+        if (gitDiffCommand) {
+            vscode.commands.executeCommand(
+                'setTitle', 
+                gitDiffCommand, 
+                `Include Git Diff ${gitDiffEnabled ? '✓' : ''}`
+            ).then(undefined, err => console.error(err));
+        }
+
+        // Update view description to show enabled options
+        const enabledOptions = [];
+        if (gitDiffEnabled) {enabledOptions.push('Git Diff');}
+        if (fileTreeEnabled) {enabledOptions.push('File Tree');}
+        if (userPromptEnabled) {enabledOptions.push('User Prompt');}
+
+        if (this.view) {
+            if (enabledOptions.length > 0) {
+                this.view.description = `Includes: ${enabledOptions.join(', ')}`;
+            } else {
+                this.view.description = "Select files to copy";
+            }
         }
     }
 }
