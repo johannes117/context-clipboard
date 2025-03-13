@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as cp from 'child_process';
+import { promisify } from 'util';
 
 export class ContextClipboardProvider implements vscode.TreeDataProvider<FileItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<FileItem | undefined | null | void> = new vscode.EventEmitter<FileItem | undefined | null | void>();
@@ -27,6 +29,9 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         this.view.description = "Select files to copy";
         this.view.message = "Tokens Selected: 0";
         console.log('View message set to:', this.view.message);
+
+        // Update the command icons based on current settings
+        this.updateCommandIcons();
 
         try {
             console.log('Initializing tiktoken encoder...');
@@ -205,13 +210,10 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
     }
 
     async copySelectedToClipboard() {
-        if (this.selectedItems.size === 0) {
-            vscode.window.showInformationMessage('No files selected');
-            return;
-        }
-
         const config = vscode.workspace.getConfiguration('contextClipboard');
         let output = '';
+        let hasContent = false;
+        let contentTypes = [];
 
         // Add user prompt if enabled
         const includeUserPrompt = config.get('includeUserPrompt', false);
@@ -221,49 +223,112 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
                 output += '<user_prompt>\n';
                 output += promptText + '\n';
                 output += '</user_prompt>\n\n';
+                hasContent = true;
+                contentTypes.push('user prompt');
             }
         }
 
-        // Add file tree if enabled
+        // Add file tree if enabled and files are selected
         const includeFileTree = config.get('includeFileTree', false);
-        if (includeFileTree) {
+        if (includeFileTree && this.selectedItems.size > 0) {
             output += '<file_tree>\n';
             for (const filePath of this.selectedItems) {
                 output += `├── ${path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath)}\n`;
             }
             output += '</file_tree>\n\n';
+            hasContent = true;
+            contentTypes.push('file tree');
         }
 
-        // Add file contents
-        let fileContents = '<file_contents>\n';
-        for (const filePath of this.selectedItems) {
-            try {
-                const content = await fs.promises.readFile(filePath, 'utf8');
-                const relativePath = path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath);
-                fileContents += `File: ${relativePath}\n\`\`\`\n${content}\n\`\`\`\n\n`;
-            } catch (error) {
-                console.error(`Error reading file ${filePath}:`, error);
+        // Add Git diff if enabled
+        const includeGitDiff = config.get('includeGitDiff', false);
+        if (includeGitDiff && vscode.workspace.workspaceFolders) {
+            const gitDiff = await this.getGitDiff();
+            if (gitDiff) {
+                const comparisonBranch = config.get('gitComparisonBranch', 'main');
+                output += `<git_diff branch="${comparisonBranch}">\n`;
+                output += gitDiff;
+                output += '</git_diff>\n\n';
+                hasContent = true;
+                contentTypes.push('git diff');
             }
         }
-        fileContents += '</file_contents>';
 
-        const finalOutput = output + fileContents;
-        await vscode.env.clipboard.writeText(finalOutput);
-        vscode.window.showInformationMessage('Selected files copied to clipboard');
+        // Add file contents if files are selected
+        if (this.selectedItems.size > 0) {
+            let fileContents = '<file_contents>\n';
+            for (const filePath of this.selectedItems) {
+                try {
+                    const content = await fs.promises.readFile(filePath, 'utf8');
+                    const relativePath = path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath);
+                    fileContents += `File: ${relativePath}\n\`\`\`\n${content}\n\`\`\`\n\n`;
+                } catch (error) {
+                    console.error(`Error reading file ${filePath}:`, error);
+                }
+            }
+            fileContents += '</file_contents>';
+            output += fileContents;
+            hasContent = true;
+            contentTypes.push(`${this.selectedItems.size} file${this.selectedItems.size > 1 ? 's' : ''}`);
+        }
+
+        // Check if there's any content to copy
+        if (!hasContent) {
+            vscode.window.showInformationMessage('No content to copy. Enable Git diff, file tree, user prompt, or select files.');
+            return;
+        }
+
+        await vscode.env.clipboard.writeText(output);
+        vscode.window.showInformationMessage(`Copied to clipboard: ${contentTypes.join(', ')}`);
     }
 
     clearSelection() {
         this.selectedItems.clear();
         this.tokenCount = 0;
         if (this.view) {
-            this.view.message = 'Tokens Selected: 0';
+            this.updateCommandIcons();
         }
         this.refresh();
     }
 
+    async toggleGitDiff() {
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        const currentValue = config.get('includeGitDiff', false);
+        await config.update('includeGitDiff', !currentValue, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`Include Git Diff: ${!currentValue ? 'Enabled' : 'Disabled'}`);
+        await this.updateTokenCount();
+        this.updateCommandIcons();
+    }
+
+    async toggleFileTree() {
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        const currentValue = config.get('includeFileTree', false);
+        await config.update('includeFileTree', !currentValue, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`Include File Tree: ${!currentValue ? 'Enabled' : 'Disabled'}`);
+        await this.updateTokenCount();
+        this.updateCommandIcons();
+    }
+
+    async toggleUserPrompt() {
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        const currentValue = config.get('includeUserPrompt', false);
+        await config.update('includeUserPrompt', !currentValue, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`Include User Prompt: ${!currentValue ? 'Enabled' : 'Disabled'}`);
+        await this.updateTokenCount();
+        this.updateCommandIcons();
+    }
+
     private async updateTokenCount() {
-        let totalTokens = 0;
+        // If encoder is not initialized yet, return early
+        if (!this.encoder) {
+            console.log('Token encoder not initialized yet, skipping token count update');
+            return;
+        }
         
+        let totalTokens = 0;
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        
+        // Count tokens for selected files
         for (const filePath of this.selectedItems) {
             try {
                 const content = await fs.promises.readFile(filePath, 'utf8');
@@ -274,12 +339,192 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             }
         }
         
+        // Count tokens for user prompt if enabled
+        const includeUserPrompt = config.get('includeUserPrompt', false);
+        if (includeUserPrompt) {
+            const promptText = config.get('userPromptText', '');
+            if (promptText) {
+                const promptWithTags = `<user_prompt>\n${promptText}\n</user_prompt>\n\n`;
+                const promptTokens = this.encoder.encode(promptWithTags);
+                totalTokens += promptTokens.length;
+            }
+        }
+        
+        // Count tokens for file tree if enabled and files are selected
+        const includeFileTree = config.get('includeFileTree', false);
+        if (includeFileTree && this.selectedItems.size > 0) {
+            let fileTreeText = '<file_tree>\n';
+            for (const filePath of this.selectedItems) {
+                fileTreeText += `├── ${path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath)}\n`;
+            }
+            fileTreeText += '</file_tree>\n\n';
+            const fileTreeTokens = this.encoder.encode(fileTreeText);
+            totalTokens += fileTreeTokens.length;
+        }
+        
+        // Count tokens for Git diff if enabled
+        const includeGitDiff = config.get('includeGitDiff', false);
+        if (includeGitDiff && vscode.workspace.workspaceFolders) {
+            const gitDiff = await this.getGitDiff();
+            if (gitDiff) {
+                const comparisonBranch = config.get('gitComparisonBranch', 'main');
+                const gitDiffWithTags = `<git_diff branch="${comparisonBranch}">\n${gitDiff}</git_diff>\n\n`;
+                const gitDiffTokens = this.encoder.encode(gitDiffWithTags);
+                totalTokens += gitDiffTokens.length;
+            }
+        }
+        
         this.tokenCount = totalTokens;
+        
+        // Update the view message with both token count and enabled options
         if (this.view) {
-            this.view.message = `Tokens Selected: ${this.tokenCount.toLocaleString()}`;
-            console.log('Updated view message to:', this.view.message);
+            this.updateCommandIcons();
+            console.log('Updated token count to:', this.tokenCount);
         } else {
             console.warn('View is undefined when trying to update token count');
+        }
+    }
+
+    async selectComparisonBranch() {
+        try {
+            const branches = await this.getGitBranches();
+            if (!branches || branches.length === 0) {
+                vscode.window.showErrorMessage('No Git branches found');
+                return;
+            }
+
+            const selectedBranch = await vscode.window.showQuickPick(branches, {
+                placeHolder: 'Select a branch to compare with',
+                canPickMany: false
+            });
+
+            if (selectedBranch) {
+                const config = vscode.workspace.getConfiguration('contextClipboard');
+                await config.update('gitComparisonBranch', selectedBranch, vscode.ConfigurationTarget.Workspace);
+                vscode.window.showInformationMessage(`Git comparison branch set to: ${selectedBranch}`);
+                
+                // Update token count if Git diff is enabled
+                const includeGitDiff = config.get('includeGitDiff', false);
+                if (includeGitDiff) {
+                    await this.updateTokenCount();
+                }
+            }
+        } catch (error) {
+            console.error('Error selecting comparison branch:', error);
+            vscode.window.showErrorMessage('Failed to get Git branches');
+        }
+    }
+
+    private async getGitBranches(): Promise<string[] | undefined> {
+        if (!vscode.workspace.workspaceFolders) {
+            return undefined;
+        }
+
+        const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        const exec = promisify(cp.exec);
+
+        try {
+            const { stdout } = await exec('git branch --format="%(refname:short)"', { cwd: workspaceRoot });
+            return stdout.split('\n')
+                .map(branch => branch.trim())
+                .filter(branch => branch.length > 0);
+        } catch (error) {
+            console.error('Error getting Git branches:', error);
+            return undefined;
+        }
+    }
+
+    private async getGitDiff(): Promise<string | undefined> {
+        if (!vscode.workspace.workspaceFolders) {
+            return undefined;
+        }
+
+        const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        const comparisonBranch = config.get('gitComparisonBranch', 'main');
+        const exec = promisify(cp.exec);
+
+        try {
+            // Get the diff in a format that's readable for LLMs
+            const { stdout } = await exec(`git diff ${comparisonBranch} --unified=3 --no-color`, { 
+                cwd: workspaceRoot,
+                maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large diffs
+            });
+            
+            if (!stdout.trim()) {
+                vscode.window.showInformationMessage(`No changes detected compared to ${comparisonBranch}`);
+                return undefined;
+            }
+            
+            return stdout;
+        } catch (error) {
+            console.error('Error getting Git diff:', error);
+            vscode.window.showErrorMessage(`Failed to get Git diff with ${comparisonBranch}`);
+            return undefined;
+        }
+    }
+
+    private async updateCommandIcons() {
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        const gitDiffEnabled = config.get('includeGitDiff', false);
+        const fileTreeEnabled = config.get('includeFileTree', false);
+        const userPromptEnabled = config.get('includeUserPrompt', false);
+
+        // Update command titles to show current state
+        await vscode.commands.executeCommand(
+            'setContext', 
+            'contextClipboard.gitDiffEnabled', 
+            gitDiffEnabled
+        );
+        await vscode.commands.executeCommand(
+            'setContext', 
+            'contextClipboard.fileTreeEnabled', 
+            fileTreeEnabled
+        );
+        await vscode.commands.executeCommand(
+            'setContext', 
+            'contextClipboard.userPromptEnabled', 
+            userPromptEnabled
+        );
+
+        // Update command titles
+        const gitDiffCommand = await vscode.commands.getCommands(true).then(
+            cmds => cmds.find(c => c === 'contextClipboard.toggleGitDiff')
+        );
+        if (gitDiffCommand) {
+            vscode.commands.executeCommand(
+                'setTitle', 
+                gitDiffCommand, 
+                `Include Git Diff ${gitDiffEnabled ? '✓' : ''}`
+            ).then(undefined, err => console.error(err));
+        }
+
+        // Update view description to show enabled options
+        const enabledOptions = [];
+        if (gitDiffEnabled) {enabledOptions.push('Git Diff');}
+        if (fileTreeEnabled && this.selectedItems.size > 0) {enabledOptions.push('File Tree');}
+        if (userPromptEnabled) {enabledOptions.push('User Prompt');}
+
+        if (this.view) {
+            if (enabledOptions.length > 0) {
+                this.view.description = `Includes: ${enabledOptions.join(', ')}`;
+            } else {
+                this.view.description = "Select files to copy";
+            }
+            
+            // Update the view message to include a single indicator for enabled options
+            const enabledLabels = [];
+            if (gitDiffEnabled) {enabledLabels.push('Git');}
+            if (fileTreeEnabled && this.selectedItems.size > 0) {enabledLabels.push('Tree');}
+            if (userPromptEnabled) {enabledLabels.push('Prompt');}
+            
+            let message = `Tokens: ${this.tokenCount.toLocaleString()}`;
+            
+            if (enabledLabels.length > 0) {
+                message += ` | Enabled: ${enabledLabels.join(', ')}`;
+            }
+            
+            this.view.message = message;
         }
     }
 }

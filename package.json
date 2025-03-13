@@ -58,6 +58,23 @@
         "command": "contextClipboard.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "contextClipboard.selectComparisonBranch",
+        "title": "Select Git Comparison Branch",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "contextClipboard.toggleGitDiff",
+        "title": "Include Git Diff"
+      },
+      {
+        "command": "contextClipboard.toggleFileTree",
+        "title": "Include File Tree"
+      },
+      {
+        "command": "contextClipboard.toggleUserPrompt",
+        "title": "Include User Prompt"
       }
     ],
     "menus": {
@@ -76,6 +93,47 @@
           "command": "contextClipboard.refresh",
           "when": "view == contextClipboardView",
           "group": "navigation@0"
+        },
+        {
+          "command": "contextClipboard.selectComparisonBranch",
+          "when": "view == contextClipboardView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "contextClipboard.toggleGitDiff",
+          "when": "view == contextClipboardView && contextClipboard.gitDiffEnabled",
+          "icon": "$(git-compare)$(check)",
+          "group": "options@1"
+        },
+        {
+          "command": "contextClipboard.toggleGitDiff",
+          "when": "view == contextClipboardView && !contextClipboard.gitDiffEnabled",
+          "icon": "$(git-compare)",
+          "group": "options@1"
+        },
+        {
+          "command": "contextClipboard.toggleFileTree",
+          "when": "view == contextClipboardView && contextClipboard.fileTreeEnabled",
+          "icon": "$(list-tree)$(check)",
+          "group": "options@2"
+        },
+        {
+          "command": "contextClipboard.toggleFileTree",
+          "when": "view == contextClipboardView && !contextClipboard.fileTreeEnabled",
+          "icon": "$(list-tree)",
+          "group": "options@2"
+        },
+        {
+          "command": "contextClipboard.toggleUserPrompt",
+          "when": "view == contextClipboardView && contextClipboard.userPromptEnabled",
+          "icon": "$(comment)$(check)",
+          "group": "options@3"
+        },
+        {
+          "command": "contextClipboard.toggleUserPrompt",
+          "when": "view == contextClipboardView && !contextClipboard.userPromptEnabled",
+          "icon": "$(comment)",
+          "group": "options@3"
         }
       ]
     },
@@ -100,6 +158,18 @@
           "description": "Custom prompt text to include in copied context when 'Include User Prompt' is enabled",
           "editPresentation": "multilineText",
           "order": 3
+        },
+        "contextClipboard.includeGitDiff": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include Git diff with comparison branch in copied context",
+          "order": 4
+        },
+        "contextClipboard.gitComparisonBranch": {
+          "type": "string",
+          "default": "main",
+          "description": "Git branch to compare with when including Git diff",
+          "order": 5
         }
       }
     }

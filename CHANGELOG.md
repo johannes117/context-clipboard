@@ -4,7 +4,41 @@ All notable changes to the "context-clipboard" extension will be documented in t
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [0.1.0] - 2025-02-06
+## [0.3.0] - 2025-02-15
+
+### Added
+- Git diff integration:
+  - `contextClipboard.includeGitDiff`: Toggle Git diff inclusion in context
+  - `contextClipboard.gitComparisonBranch`: Select which branch to compare with
+  - Branch selection command for easy comparison branch switching
+- Quick toggle buttons in toolbar for enabling/disabling features:
+  - Git diff toggle with visual indicator
+  - File tree toggle with visual indicator
+  - User prompt toggle with visual indicator
+- Enhanced token counting:
+  - Accurate token counting for all content types (files, Git diff, file tree, user prompt)
+  - Real-time token updates when toggling features
+- Status indicators:
+  - Consolidated status display showing enabled features
+  - Token count display with all content types included
+
+### Enhanced
+- Copy functionality:
+  - Support for copying content without file selection
+  - Ability to copy just Git diff, user prompt, or any combination
+  - Improved success messages showing what was copied
+- UI improvements:
+  - Better visual feedback for enabled features
+  - More intuitive status display
+  - Clearer error messages
+
+### Technical Details
+- Implemented Git operations using child_process
+- Added context variables for feature toggle state
+- Enhanced token counting logic to handle multiple content types
+- Improved error handling for Git operations
+
+## [0.2.0] - 2025-02-06
 
 ### Added
 - Configurable context output format with granular control:
