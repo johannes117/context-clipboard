@@ -25,7 +25,7 @@ This document outlines the steps to deploy a new version of the Context Clipboar
    ```bash
    vsce login contextstudio
    ```
-   When prompted, enter your PAT from Azure DevOps.
+   When prompted, enter your PAT from Azure DevOps. (Make sure PAT has Marketplace (publish) scope)
 
 3. Package the extension (optional, to test):
    ```bash
