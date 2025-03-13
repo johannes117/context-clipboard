@@ -283,6 +283,7 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         const currentValue = config.get('includeGitDiff', false);
         await config.update('includeGitDiff', !currentValue, vscode.ConfigurationTarget.Global);
         vscode.window.showInformationMessage(`Include Git Diff: ${!currentValue ? 'Enabled' : 'Disabled'}`);
+        await this.updateTokenCount();
         this.updateCommandIcons();
     }
 
@@ -291,6 +292,7 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         const currentValue = config.get('includeFileTree', false);
         await config.update('includeFileTree', !currentValue, vscode.ConfigurationTarget.Global);
         vscode.window.showInformationMessage(`Include File Tree: ${!currentValue ? 'Enabled' : 'Disabled'}`);
+        await this.updateTokenCount();
         this.updateCommandIcons();
     }
 
@@ -299,12 +301,21 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         const currentValue = config.get('includeUserPrompt', false);
         await config.update('includeUserPrompt', !currentValue, vscode.ConfigurationTarget.Global);
         vscode.window.showInformationMessage(`Include User Prompt: ${!currentValue ? 'Enabled' : 'Disabled'}`);
+        await this.updateTokenCount();
         this.updateCommandIcons();
     }
 
     private async updateTokenCount() {
-        let totalTokens = 0;
+        // If encoder is not initialized yet, return early
+        if (!this.encoder) {
+            console.log('Token encoder not initialized yet, skipping token count update');
+            return;
+        }
         
+        let totalTokens = 0;
+        const config = vscode.workspace.getConfiguration('contextClipboard');
+        
+        // Count tokens for selected files
         for (const filePath of this.selectedItems) {
             try {
                 const content = await fs.promises.readFile(filePath, 'utf8');
@@ -312,6 +323,41 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
                 totalTokens += tokens.length;
             } catch (error) {
                 console.error(`Error counting tokens for ${filePath}:`, error);
+            }
+        }
+        
+        // Count tokens for user prompt if enabled
+        const includeUserPrompt = config.get('includeUserPrompt', false);
+        if (includeUserPrompt) {
+            const promptText = config.get('userPromptText', '');
+            if (promptText) {
+                const promptWithTags = `<user_prompt>\n${promptText}\n</user_prompt>\n\n`;
+                const promptTokens = this.encoder.encode(promptWithTags);
+                totalTokens += promptTokens.length;
+            }
+        }
+        
+        // Count tokens for file tree if enabled
+        const includeFileTree = config.get('includeFileTree', false);
+        if (includeFileTree && this.selectedItems.size > 0) {
+            let fileTreeText = '<file_tree>\n';
+            for (const filePath of this.selectedItems) {
+                fileTreeText += `├── ${path.relative(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath)}\n`;
+            }
+            fileTreeText += '</file_tree>\n\n';
+            const fileTreeTokens = this.encoder.encode(fileTreeText);
+            totalTokens += fileTreeTokens.length;
+        }
+        
+        // Count tokens for Git diff if enabled
+        const includeGitDiff = config.get('includeGitDiff', false);
+        if (includeGitDiff && vscode.workspace.workspaceFolders) {
+            const gitDiff = await this.getGitDiff();
+            if (gitDiff) {
+                const comparisonBranch = config.get('gitComparisonBranch', 'main');
+                const gitDiffWithTags = `<git_diff branch="${comparisonBranch}">\n${gitDiff}</git_diff>\n\n`;
+                const gitDiffTokens = this.encoder.encode(gitDiffWithTags);
+                totalTokens += gitDiffTokens.length;
             }
         }
         
@@ -343,6 +389,12 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
                 const config = vscode.workspace.getConfiguration('contextClipboard');
                 await config.update('gitComparisonBranch', selectedBranch, vscode.ConfigurationTarget.Workspace);
                 vscode.window.showInformationMessage(`Git comparison branch set to: ${selectedBranch}`);
+                
+                // Update token count if Git diff is enabled
+                const includeGitDiff = config.get('includeGitDiff', false);
+                if (includeGitDiff) {
+                    await this.updateTokenCount();
+                }
             }
         } catch (error) {
             console.error('Error selecting comparison branch:', error);
