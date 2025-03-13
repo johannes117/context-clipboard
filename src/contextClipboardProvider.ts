@@ -273,7 +273,7 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         this.selectedItems.clear();
         this.tokenCount = 0;
         if (this.view) {
-            this.view.message = 'Tokens Selected: 0';
+            this.updateCommandIcons();
         }
         this.refresh();
     }
@@ -316,9 +316,11 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
         }
         
         this.tokenCount = totalTokens;
+        
+        // Update the view message with both token count and enabled options
         if (this.view) {
-            this.view.message = `Tokens Selected: ${this.tokenCount.toLocaleString()}`;
-            console.log('Updated view message to:', this.view.message);
+            this.updateCommandIcons();
+            console.log('Updated token count to:', this.tokenCount);
         } else {
             console.warn('View is undefined when trying to update token count');
         }
@@ -444,6 +446,15 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
             } else {
                 this.view.description = "Select files to copy";
             }
+            
+            // Update the view message to include indicators for enabled options
+            const indicators = [];
+            indicators.push(`Tokens: ${this.tokenCount.toLocaleString()}`);
+            indicators.push(`Git: ${gitDiffEnabled ? '🟢' : '⚪'}`);
+            indicators.push(`Tree: ${fileTreeEnabled ? '🟢' : '⚪'}`);
+            indicators.push(`Prompt: ${userPromptEnabled ? '🟢' : '⚪'}`);
+            
+            this.view.message = indicators.join(' | ');
         }
     }
 }
