@@ -447,14 +447,19 @@ export class ContextClipboardProvider implements vscode.TreeDataProvider<FileIte
                 this.view.description = "Select files to copy";
             }
             
-            // Update the view message to include indicators for enabled options
-            const indicators = [];
-            indicators.push(`Tokens: ${this.tokenCount.toLocaleString()}`);
-            indicators.push(`Git: ${gitDiffEnabled ? '🟢' : '⚪'}`);
-            indicators.push(`Tree: ${fileTreeEnabled ? '🟢' : '⚪'}`);
-            indicators.push(`Prompt: ${userPromptEnabled ? '🟢' : '⚪'}`);
+            // Update the view message to include a single indicator for enabled options
+            const enabledLabels = [];
+            if (gitDiffEnabled) {enabledLabels.push('Git');}
+            if (fileTreeEnabled) {enabledLabels.push('Tree');}
+            if (userPromptEnabled) {enabledLabels.push('Prompt');}
             
-            this.view.message = indicators.join(' | ');
+            let message = `Tokens: ${this.tokenCount.toLocaleString()}`;
+            
+            if (enabledLabels.length > 0) {
+                message += ` | Enabled: ${enabledLabels.join(', ')}`;
+            }
+            
+            this.view.message = message;
         }
     }
 }
